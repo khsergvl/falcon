@@ -13,11 +13,16 @@ public class GunServiceCouchShooter implements GunService {
 
     @Autowired
     private TargetRepository targetRepository;
+    @Autowired(required = false)
+    private TargetShootAcknowledgementSupportService targetShootAcknowledgementSupportService;
 
     @Override
     public void shoot(Target target) {
         targetRepository.save(target).subscribe((t) -> {
             LOGGER.info("Target {} destroyed", t.getName());
+            if (targetShootAcknowledgementSupportService != null) {
+                targetShootAcknowledgementSupportService.getCdl().countDown();
+            }
         });
     }
 }

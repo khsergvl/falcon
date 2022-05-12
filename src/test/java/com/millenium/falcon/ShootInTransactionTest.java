@@ -2,6 +2,7 @@ package com.millenium.falcon;
 
 import com.millenium.falcon.repository.TargetRepository;
 import com.millenium.falcon.service.GunService;
+import com.millenium.falcon.service.TargetShootAcknowledgementSupportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +28,9 @@ public class ShootInTransactionTest extends AbstractIntegrationTest {
     @Autowired
     private TargetRepository repository;
 
+    @Autowired
+    private TargetShootAcknowledgementSupportService targetShootAcknowledgementSupportService;
+
     @Value("${queue.target.name}")
     private String destination;
 
@@ -46,7 +50,7 @@ public class ShootInTransactionTest extends AbstractIntegrationTest {
         this.jmsTemplate.convertAndSend(destination, msg);
         jmsTemplate.setReceiveTimeout(5_000);
 
-
+        targetShootAcknowledgementSupportService.getCdl().await();
         verify(gunService, times(2)).shoot(any());
 
        assertTrue(repository.existsById(targetName).block());
