@@ -1,4 +1,4 @@
-# Integration test example for workshop
+# Integration test example - toxy proxy simulation
 
 ### Requirements
 

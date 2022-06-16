@@ -1,40 +1,50 @@
 package com.millenium.falcon;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.OracleContainer;
-import org.testcontainers.couchbase.BucketDefinition;
-import org.testcontainers.couchbase.CouchbaseContainer;
-import org.testcontainers.utility.MountableFile;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.ToxiproxyContainer;
+import org.testcontainers.utility.DockerImageName;
 
 public abstract class AbstractIntegrationTest {
+    private static Logger LOGGER = LoggerFactory.getLogger(AbstractIntegrationTest.class);
 
-    private static final BucketDefinition bucketDefinition = new BucketDefinition("testBucket");
+    private static final DockerImageName TOXIPROXY_IMAGE = DockerImageName.parse("shopify/toxiproxy:2.1.0");
 
-    static final OracleContainer oracle = new OracleContainer("gvenzl/oracle-xe:21.3.0-slim")
-            .withCopyFileToContainer(MountableFile.forClasspathResource("db/init.sql"), "/container-entrypoint-startdb.d/init.sql");
+    static final Network network = Network.newNetwork();
 
-    static final CouchbaseContainer couchbase = new CouchbaseContainer("couchbase/server:7.0.2")
-            .withBucket(bucketDefinition);
+    static final GenericContainer mysql = new MySQLContainer()
+            .withInitScript("db/init.sql")
+            .withExposedPorts(3306)
+            .withNetwork(network);
+
+    static final ToxiproxyContainer toxiproxy = new ToxiproxyContainer(TOXIPROXY_IMAGE)
+            .withNetwork(network)
+            .withNetworkAliases("toxiproxy");
+
+    static ToxiproxyContainer.ContainerProxy proxy;
+
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
-        //Couchbase
-        registry.add("spring.couchbase.connection-string", couchbase::getConnectionString);
-        registry.add("spring.couchbase.username", couchbase::getUsername);
-        registry.add("spring.couchbase.password", couchbase::getPassword);
-        registry.add("spring.couchbase.bucket.name", bucketDefinition::getName);
+        proxy =  toxiproxy.getProxy(mysql, (Integer) mysql.getExposedPorts().get(0));
 
-        //Oracle
-        registry.add("spring.datasource.url", oracle::getJdbcUrl);
-        registry.add("spring.datasource.username", () -> "FALCON");
-        registry.add("spring.datasource.password", () -> "test123");
+        //Mysql
+        String url = String.format("jdbc:mysql://%s:%s/test", proxy.getContainerIpAddress(), proxy.getProxyPort());
+        LOGGER.info("connection url is {}", url);
+        registry.add("spring.datasource.url", () -> url);
+        registry.add("spring.datasource.username", () -> ((MySQLContainer)mysql).getUsername());
+        registry.add("spring.datasource.password", () -> ((MySQLContainer)mysql).getPassword());
     }
 
     @BeforeAll
     static void setup() {
-        oracle.start();
-        couchbase.start();
+        toxiproxy.start();
+        mysql.start();
     }
 }

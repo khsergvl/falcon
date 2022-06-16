@@ -1,34 +1,22 @@
 package com.millenium.falcon.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Version;
-import org.springframework.data.couchbase.core.mapping.Document;
-import org.springframework.data.couchbase.core.mapping.Field;
-
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
 import java.util.Objects;
 
-@Document
+@Entity
 public class Target {
-
-    @Version
-    private long version;
 
     @Id
     private String name;
 
-    @Field
-    private int CordX;
+    @Column(name = "cord_x")
+    private int cordX;
 
-    @Field
-    private int CordY;
+    @Column(name = "cord_y")
+    private int cordY;
 
-    public long getVersion() {
-        return version;
-    }
-
-    public void setVersion(long version) {
-        this.version = version;
-    }
 
     public String getName() {
         return name;
@@ -39,19 +27,19 @@ public class Target {
     }
 
     public int getCordX() {
-        return CordX;
+        return cordX;
     }
 
     public void setCordX(int cordX) {
-        this.CordX = cordX;
+        this.cordX = cordX;
     }
 
     public int getCordY() {
-        return CordY;
+        return cordY;
     }
 
     public void setCordY(int cordY) {
-        this.CordY = cordY;
+        this.cordY = cordY;
     }
 
     @Override
@@ -59,14 +47,13 @@ public class Target {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Target target = (Target) o;
-        return version == target.version &&
-                CordX == target.CordX &&
-                CordY == target.CordY &&
-                name.equals(target.name);
+        return cordX == target.cordX &&
+                cordY == target.cordY &&
+                Objects.equals(name, target.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(version, name, CordX, CordY);
+        return Objects.hash(name, cordX, cordY);
     }
 }
